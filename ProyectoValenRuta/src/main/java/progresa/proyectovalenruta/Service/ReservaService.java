@@ -52,7 +52,7 @@ public class ReservaService {
 
                     dto.setOrigen(r.getViaje().getOrigen());
                     dto.setDestino(r.getViaje().getDestino());
-                    dto.setFecha(r.getViaje().getFecha().toString());
+                    dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
                     dto.setPrecio(r.getViaje().getPrecio());
 
                     return dto;
@@ -276,7 +276,7 @@ public class ReservaService {
 
                     dto.setOrigen(r.getViaje().getOrigen());
                     dto.setDestino(r.getViaje().getDestino());
-                    dto.setFecha(r.getViaje().getFecha().toString());
+                    dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
 
                     dto.setEstadoViaje(r.getViaje().getEstado());
 

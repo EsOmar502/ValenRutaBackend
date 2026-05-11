@@ -5,15 +5,14 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import progresa.proyectovalenruta.DAO.UsuarioDAO;
 import progresa.proyectovalenruta.DAO.VehiculoDAO;
 import progresa.proyectovalenruta.DAO.ConductorDAO;
-import progresa.proyectovalenruta.DAO.UsuarioDAO;
-import progresa.proyectovalenruta.Entity.Vehiculo;
-import progresa.proyectovalenruta.Entity.Usuario;
 import progresa.proyectovalenruta.Entity.Conductor;
+import progresa.proyectovalenruta.Entity.Usuario;
+import progresa.proyectovalenruta.Entity.Vehiculo;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class VehiculoService {
@@ -22,10 +21,10 @@ public class VehiculoService {
     private VehiculoDAO vehiculoDAO;
 
     @Autowired
-    private ConductorDAO conductorDAO;
+    private UsuarioDAO usuarioDAO;
 
     @Autowired
-    private UsuarioDAO usuarioDAO;
+    private ConductorDAO conductorDAO;
 
     public List<Vehiculo> getAll() {
         return vehiculoDAO.findAll();
@@ -33,6 +32,18 @@ public class VehiculoService {
 
     public Vehiculo getById(Long id) {
         return vehiculoDAO.findById(id).orElse(null);
+    }
+
+    public List<Vehiculo> getByUsuario(Long usuarioId) {
+
+        System.out.println("BUSCANDO VEHICULOS PARA USUARIO: " + usuarioId);
+
+        List<Vehiculo> vehiculos =
+                vehiculoDAO.findAllByUsuario_Id(usuarioId);
+
+        System.out.println("TOTAL VEHICULOS: " + vehiculos.size());
+
+        return vehiculos;
     }
 
     public Vehiculo save(Vehiculo vehiculo) {
@@ -61,25 +72,32 @@ public class VehiculoService {
                             "Usuario no encontrado"
                     ));
 
-            // 🔥 CORRECTO
-            Optional<Conductor> conductorOpt = conductorDAO.findByUsuarioId(usuarioBD.getId());
+            Conductor conductorExistente =
+                    conductorDAO.findByUsuarioId(usuarioBD.getId())
+                            .orElse(null);
 
-            if (conductorOpt.isEmpty()) {
+            if (conductorExistente == null) {
 
-                System.out.println("🔥 Creando conductor automáticamente");
+                System.out.println("CREANDO CONDUCTOR AUTOMÁTICO");
 
                 Conductor nuevoConductor = new Conductor();
+
                 nuevoConductor.setUsuario(usuarioBD);
-                nuevoConductor.setVerificado(false);
+
+                // MVP
+                nuevoConductor.setVerificado(true);
 
                 conductorDAO.save(nuevoConductor);
             }
 
+            // 🔥 ASOCIAR VEHÍCULO AL USUARIO
             vehiculo.setUsuario(usuarioBD);
 
+            // 🔥 GUARDAR VEHÍCULO
             return vehiculoDAO.save(vehiculo);
 
         } catch (DataIntegrityViolationException e) {
+
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Error de integridad de datos (posible duplicado)"

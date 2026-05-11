@@ -10,4 +10,11 @@ public class ViajeCercanoDTO {
     private String destino;
     private double precio;
     private double distanciaKm;
+
+    private Double latOrigen;
+    private Double lngOrigen;
+    private Double latDestino;
+    private Double lngDestino;
+
+    private String fechaSalida;
 }

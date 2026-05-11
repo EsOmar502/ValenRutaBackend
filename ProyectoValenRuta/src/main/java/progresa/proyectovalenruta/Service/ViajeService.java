@@ -11,10 +11,9 @@ import progresa.proyectovalenruta.DTO.ViajeDisponibleDTO;
 import progresa.proyectovalenruta.Entity.Conductor;
 import progresa.proyectovalenruta.Entity.Viaje;
 import progresa.proyectovalenruta.DAO.ConductorDAO;
-import progresa.proyectovalenruta.Geolocalizacion.GeoService;
 import progresa.proyectovalenruta.DTO.ViajeCercanoDTO;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -22,12 +21,10 @@ public class ViajeService {
 
     private final ViajeDAO viajeDAO;
     private final ConductorDAO conductorDAO;
-    private final GeoService geoService;
 
-    public ViajeService(ViajeDAO viajeDAO, ConductorDAO conductorDAO, GeoService geoService) {
+    public ViajeService(ViajeDAO viajeDAO, ConductorDAO conductorDAO) {
         this.viajeDAO = viajeDAO;
         this.conductorDAO = conductorDAO;
-        this.geoService = geoService;
     }
 
     public List<Viaje> getAll() {
@@ -38,15 +35,15 @@ public class ViajeService {
         return viajeDAO.findById(id).orElse(null);
     }
 
-    public List<Viaje> buscarDisponibles(String origen, String destino, LocalDate fecha) {
-        return viajeDAO.buscarDisponibles(origen, destino, fecha);
+    public List<Viaje> buscarDisponibles(String origen, String destino, LocalDateTime fechaSalida) {
+        return viajeDAO.buscarDisponibles(origen, destino, fechaSalida);
     }
 
     public Viaje save(Viaje viaje) {
 
         try {
 
-            // 🔹 Validación conductor
+            // Validación conductor
             if (viaje.getConductor() == null || viaje.getConductor().getId() == null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
@@ -60,25 +57,25 @@ public class ViajeService {
                             "Conductor no encontrado"
                     ));
 
-            if (!conductor.isVerificado()) {
-                throw new ResponseStatusException(
-                        HttpStatus.FORBIDDEN,
-                        "El conductor no está verificado"
-                );
-            }
+//            if (!conductor.isVerificado()) {
+//                throw new ResponseStatusException(
+//                        HttpStatus.FORBIDDEN,
+//                        "El conductor no está verificado"
+//                );
+//            }
 
-            // 🔹 Limpieza básica de strings
+            // Limpieza básica de strings
             String origen = viaje.getOrigen() != null ? viaje.getOrigen().trim() : null;
             String destino = viaje.getDestino() != null ? viaje.getDestino().trim() : null;
 
             viaje.setOrigen(origen);
             viaje.setDestino(destino);
 
-            // 🔹 Validar duplicados
-            boolean existe = viajeDAO.existsByOrigenAndDestinoAndFechaAndConductor_Id(
+            // Validar duplicados
+            boolean existe = viajeDAO.existsByOrigenAndDestinoAndFechaSalidaAndConductor_Id(
                     origen,
                     destino,
-                    viaje.getFecha(),
+                    viaje.getFechaSalida(),
                     conductor.getId()
             );
 
@@ -87,24 +84,6 @@ public class ViajeService {
                         HttpStatus.BAD_REQUEST,
                         "Ya existe un viaje con la misma información para este conductor."
                 );
-            }
-
-            // 🔥 GEOLOCALIZACIÓN INTELIGENTE (PRO)
-            // Si el frontend ya manda coords → NO llamar a Google
-            if (viaje.getOrigenLat() == null || viaje.getOrigenLng() == null) {
-
-                double[] coords = geoService.getCoordinates(origen);
-
-                if (coords == null || coords.length < 2) {
-                    throw new ResponseStatusException(
-                            HttpStatus.INTERNAL_SERVER_ERROR,
-                            "No se pudieron obtener coordenadas"
-                    );
-                }
-
-                viaje.setOrigenLat(coords[0]);
-                viaje.setOrigenLng(coords[1]);
-
             }
 
             viaje.setConductor(conductor);
@@ -117,30 +96,29 @@ public class ViajeService {
                     HttpStatus.BAD_REQUEST,
                     "Intento de duplicado detectado."
             );
-        } catch (Exception e) {
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error creando viaje: " + e.getMessage()
-            );
         }
+    }
+
+    public Viaje update(Viaje viaje) {
+        return viajeDAO.save(viaje);
     }
 
     public void delete(Long id) {
         viajeDAO.deleteById(id);
     }
 
-    // 🔥 MÉTODO PRO: DTO + distancia + ordenado
+    // Búsqueda por cercanía con Haversine
     public List<ViajeCercanoDTO> buscarCercanos(Double lat, Double lng, Double radioKm) {
 
         return viajeDAO.findAll().stream()
-                .filter(v -> v.getOrigenLat() != null && v.getOrigenLng() != null)
+                .filter(v -> v.getLatOrigen() != null && v.getLngOrigen() != null)
                 .map(v -> {
 
                     double distancia = calcularDistancia(
                             lat,
                             lng,
-                            v.getOrigenLat(),
-                            v.getOrigenLng()
+                            v.getLatOrigen(),
+                            v.getLngOrigen()
                     );
 
                     if (distancia <= radioKm) {
@@ -150,6 +128,11 @@ public class ViajeService {
                         dto.setDestino(v.getDestino());
                         dto.setPrecio(v.getPrecio());
                         dto.setDistanciaKm(Math.round(distancia * 100.0) / 100.0);
+                        dto.setLatOrigen(v.getLatOrigen());
+                        dto.setLngOrigen(v.getLngOrigen());
+                        dto.setLatDestino(v.getLatDestino());
+                        dto.setLngDestino(v.getLngDestino());
+                        dto.setFechaSalida(v.getFechaSalida() != null ? v.getFechaSalida().toString() : null);
                         return dto;
                     }
 
@@ -160,7 +143,7 @@ public class ViajeService {
                 .toList();
     }
 
-    // 🔥 Fórmula Haversine (correcta)
+    // Fórmula Haversine
     private double calcularDistancia(double lat1, double lon1, double lat2, double lon2) {
 
         final int R = 6371;
@@ -202,15 +185,21 @@ public class ViajeService {
 
         return viajeDAO.findAll()
                 .stream()
+                .filter(viaje -> !"FINALIZADO".equals(viaje.getEstado()))
+                .filter(viaje -> viaje.getAsientosDisponibles() > 0)
                 .map(viaje -> new ViajeDisponibleDTO(
-
                         viaje.getId(),
                         viaje.getOrigen(),
                         viaje.getDestino(),
-                        viaje.getFecha().toString(),
+                        viaje.getFechaSalida() != null ? viaje.getFechaSalida().toString() : null,
                         viaje.getPrecio(),
                         viaje.getAsientosDisponibles(),
-                        viaje.getConductor().getUsuario().getNombre()
+                        viaje.getConductor().getUsuario().getNombre(),
+                        viaje.getConductor().getUsuario().getId(),
+                        viaje.getLatOrigen(),
+                        viaje.getLngOrigen(),
+                        viaje.getLatDestino(),
+                        viaje.getLngDestino()
                 ))
                 .toList();
     }
@@ -224,15 +213,38 @@ public class ViajeService {
                 ));
 
         return new ViajeDetalleDTO(
-
                 viaje.getId(),
                 viaje.getOrigen(),
                 viaje.getDestino(),
-                viaje.getFecha().toString(),
+                viaje.getFechaSalida() != null ? viaje.getFechaSalida().toString() : null,
                 viaje.getPrecio(),
                 viaje.getAsientosDisponibles(),
                 viaje.getEstado(),
-                viaje.getConductor().getUsuario().getNombre()
+                viaje.getConductor().getUsuario().getNombre(),
+                viaje.getLatOrigen(),
+                viaje.getLngOrigen(),
+                viaje.getLatDestino(),
+                viaje.getLngDestino()
         );
+    }
+
+    public List<ViajeDisponibleDTO> getMisViajes(Long usuarioId) {
+        return viajeDAO.findByConductor_Usuario_Id(usuarioId)
+                .stream()
+                .map(viaje -> new ViajeDisponibleDTO(
+                        viaje.getId(),
+                        viaje.getOrigen(),
+                        viaje.getDestino(),
+                        viaje.getFechaSalida() != null ? viaje.getFechaSalida().toString() : null,
+                        viaje.getPrecio(),
+                        viaje.getAsientosDisponibles(),
+                        viaje.getConductor().getUsuario().getNombre(),
+                        viaje.getConductor().getUsuario().getId(),
+                        viaje.getLatOrigen(),
+                        viaje.getLngOrigen(),
+                        viaje.getLatDestino(),
+                        viaje.getLngDestino()
+                ))
+                .toList();
     }
 }

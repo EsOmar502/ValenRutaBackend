@@ -2,6 +2,7 @@ package progresa.proyectovalenruta.Entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.List;
 public class Conductor {
 
     @JsonIgnore
+    @ToString.Exclude
     @OneToMany(mappedBy = "conductor")
     private List<Viaje> viajes;
 
@@ -19,6 +21,8 @@ public class Conductor {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
+    @ToString.Exclude
     @OneToOne
     @JoinColumn(name = "usuario_id")
     private Usuario usuario;

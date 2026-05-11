@@ -11,6 +11,7 @@ import progresa.proyectovalenruta.Entity.Usuario;
 import progresa.proyectovalenruta.Entity.Vehiculo;
 import progresa.proyectovalenruta.Service.UsuarioService;
 import progresa.proyectovalenruta.Service.VehiculoService;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -101,6 +102,32 @@ public class VehiculoController {
         return vehiculoService.save(existente);
     }
 
+    @GetMapping("/mis-vehiculos")
+    public List<Vehiculo> miVehiculo(Authentication auth) {
+
+        try {
+
+            String email = auth.getName();
+
+            System.out.println("EMAIL TOKEN: " + email);
+
+            Usuario usuario = usuarioService.findByEmail(email);
+
+            System.out.println("USUARIO ID: " + usuario.getId());
+
+            List<Vehiculo> vehiculos = vehiculoService.getByUsuario(usuario.getId());
+
+            System.out.println("PASO QUERY");
+
+            return vehiculos;
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            throw e;
+        }
+    }
     // 🔒 PATCH parcial
     @PatchMapping("/{id}")
     public Vehiculo actualizarParcial(@PathVariable Long id,

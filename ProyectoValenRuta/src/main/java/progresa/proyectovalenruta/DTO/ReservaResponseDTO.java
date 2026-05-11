@@ -11,8 +11,11 @@ public class ReservaResponseDTO {
     private String usuarioNombre;
     private String usuarioEmail;
 
+    private String conductorNombre;
+    private Long conductorId;
+
     private String origen;
     private String destino;
-    private String fecha;
+    private String fechaSalida;
     private double precio;
 }
