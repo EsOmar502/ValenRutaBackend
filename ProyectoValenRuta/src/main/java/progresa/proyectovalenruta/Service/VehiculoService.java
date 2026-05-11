@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import progresa.proyectovalenruta.DAO.UsuarioDAO;
 import progresa.proyectovalenruta.DAO.VehiculoDAO;
+import progresa.proyectovalenruta.DAO.ConductorDAO;
+import progresa.proyectovalenruta.Entity.Conductor;
 import progresa.proyectovalenruta.Entity.Usuario;
 import progresa.proyectovalenruta.Entity.Vehiculo;
 
@@ -20,6 +22,9 @@ public class VehiculoService {
 
     @Autowired
     private UsuarioDAO usuarioDAO;
+
+    @Autowired
+    private ConductorDAO conductorDAO;
 
     public List<Vehiculo> getAll() {
         return vehiculoDAO.findAll();
@@ -66,6 +71,24 @@ public class VehiculoService {
                             HttpStatus.NOT_FOUND,
                             "Usuario no encontrado"
                     ));
+
+            Conductor conductorExistente =
+                    conductorDAO.findByUsuarioId(usuarioBD.getId())
+                            .orElse(null);
+
+            if (conductorExistente == null) {
+
+                System.out.println("CREANDO CONDUCTOR AUTOMÁTICO");
+
+                Conductor nuevoConductor = new Conductor();
+
+                nuevoConductor.setUsuario(usuarioBD);
+
+                // MVP
+                nuevoConductor.setVerificado(true);
+
+                conductorDAO.save(nuevoConductor);
+            }
 
             // 🔥 ASOCIAR VEHÍCULO AL USUARIO
             vehiculo.setUsuario(usuarioBD);

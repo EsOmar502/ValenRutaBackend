@@ -29,4 +29,6 @@ public interface ViajeDAO extends JpaRepository<Viaje, Long> {
             String destino,
             LocalDateTime fechaSalida
     );
+
+    List<Viaje> findByConductor_Usuario_Id(Long usuarioId);
 }

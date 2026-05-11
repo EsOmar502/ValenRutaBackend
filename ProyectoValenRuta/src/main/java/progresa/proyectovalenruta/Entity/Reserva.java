@@ -8,12 +8,7 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(
-        name = "reservas",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"usuario_id", "viaje_id"})
-        }
-)
+@Table(name = "reservas")
 public class Reserva {
 
     @Id

@@ -57,12 +57,12 @@ public class ViajeService {
                             "Conductor no encontrado"
                     ));
 
-            if (!conductor.isVerificado()) {
-                throw new ResponseStatusException(
-                        HttpStatus.FORBIDDEN,
-                        "El conductor no está verificado"
-                );
-            }
+//            if (!conductor.isVerificado()) {
+//                throw new ResponseStatusException(
+//                        HttpStatus.FORBIDDEN,
+//                        "El conductor no está verificado"
+//                );
+//            }
 
             // Limpieza básica de strings
             String origen = viaje.getOrigen() != null ? viaje.getOrigen().trim() : null;
@@ -97,6 +97,10 @@ public class ViajeService {
                     "Intento de duplicado detectado."
             );
         }
+    }
+
+    public Viaje update(Viaje viaje) {
+        return viajeDAO.save(viaje);
     }
 
     public void delete(Long id) {
@@ -221,5 +225,24 @@ public class ViajeService {
                 viaje.getLatDestino(),
                 viaje.getLngDestino()
         );
+    }
+
+    public List<ViajeDisponibleDTO> getMisViajes(Long usuarioId) {
+        return viajeDAO.findByConductor_Usuario_Id(usuarioId)
+                .stream()
+                .map(viaje -> new ViajeDisponibleDTO(
+                        viaje.getId(),
+                        viaje.getOrigen(),
+                        viaje.getDestino(),
+                        viaje.getFechaSalida() != null ? viaje.getFechaSalida().toString() : null,
+                        viaje.getPrecio(),
+                        viaje.getAsientosDisponibles(),
+                        viaje.getConductor().getUsuario().getNombre(),
+                        viaje.getLatOrigen(),
+                        viaje.getLngOrigen(),
+                        viaje.getLatDestino(),
+                        viaje.getLngDestino()
+                ))
+                .toList();
     }
 }

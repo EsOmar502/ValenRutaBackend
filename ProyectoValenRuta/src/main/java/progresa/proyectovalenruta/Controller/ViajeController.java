@@ -19,6 +19,7 @@ import progresa.proyectovalenruta.Service.ViajeService;
 import progresa.proyectovalenruta.DTO.ViajeCercanoDTO;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/viajes")
@@ -34,22 +35,79 @@ public class ViajeController {
     @Autowired
     private ConductorService conductorService;
 
+    // ═══════════════════════════════════════════════
+    // RUTAS FIJAS (ANTES de /{id} para evitar conflictos)
+    // ═══════════════════════════════════════════════
 
-    @GetMapping("/{id}")
-    public ViajeDetalleDTO getById(@PathVariable Long id) {
-
-        return viajeService.getDetalleViaje(id);
+    // GET todos (devuelve DTOs para evitar loops Jackson)
+    @GetMapping
+    public List<ViajeDisponibleDTO> listar() {
+        return viajeService.getViajesDisponibles();
     }
 
-    // GET todos
-    @GetMapping
-    public List<Viaje> listar() {
-        return viajeService.getAll();
+    // GET mis viajes publicados como conductor
+    @GetMapping("/mis")
+    public List<ViajeDisponibleDTO> misViajes() {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+
+        Usuario usuario = usuarioService.findByEmail(email);
+
+        if (usuario == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Usuario no encontrado"
+            );
+        }
+
+        return viajeService.getMisViajes(usuario.getId());
+    }
+
+    // GET viajes disponibles
+    @GetMapping("/disponibles")
+    public List<ViajeDisponibleDTO> buscarDisponibles(
+            @RequestParam(required = false) String origen,
+            @RequestParam(required = false) String destino,
+            @RequestParam(required = false) String fecha
+    ) {
+
+        return viajeService.getViajesDisponibles();
+    }
+
+    // GET viajes cercanos
+    @GetMapping("/cercanos")
+    public List<ViajeCercanoDTO> buscarCercanos(
+            @RequestParam Double lat,
+            @RequestParam Double lng,
+            @RequestParam Double radio
+    ) {
+        return viajeService.buscarCercanos(lat, lng, radio);
+    }
+
+    // PATCH finalizar viaje
+    @PatchMapping("/finalizar/{id}")
+    public Map<String, Object> finalizar(@PathVariable Long id) {
+        Viaje viaje = viajeService.finalizarViaje(id);
+        return Map.of(
+                "id", viaje.getId(),
+                "estado", viaje.getEstado()
+        );
+    }
+
+    // ═══════════════════════════════════════════════
+    // RUTAS CON PATH VARIABLE (DESPUÉS de rutas fijas)
+    // ═══════════════════════════════════════════════
+
+    // GET por ID
+    @GetMapping("/{id}")
+    public ViajeDetalleDTO getById(@PathVariable Long id) {
+        return viajeService.getDetalleViaje(id);
     }
 
     // POST crear viaje
     @PostMapping
-    public Viaje crear(@Valid @RequestBody ViajeDTO dto) {
+    public Map<String, Object> crear(@Valid @RequestBody ViajeDTO dto) {
 
         // 1. Usuario desde JWT
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -106,7 +164,17 @@ public class ViajeController {
         v.setLatDestino(dto.getLatDestino());
         v.setLngDestino(dto.getLngDestino());
 
-        return viajeService.save(v);
+        Viaje saved = viajeService.save(v);
+
+        // Devolver DTO limpio en vez de entity
+        return Map.of(
+                "id", saved.getId(),
+                "origen", saved.getOrigen(),
+                "destino", saved.getDestino(),
+                "estado", saved.getEstado(),
+                "precio", saved.getPrecio(),
+                "asientosDisponibles", saved.getAsientosDisponibles()
+        );
     }
 
     // DELETE seguro
@@ -131,7 +199,7 @@ public class ViajeController {
 
     // PUT actualización completa
     @PutMapping("/{id}")
-    public Viaje actualizar(@PathVariable Long id, @Valid @RequestBody ViajeDTO dto) {
+    public Map<String, Object> actualizar(@PathVariable Long id, @Valid @RequestBody ViajeDTO dto) {
 
         Viaje existente = viajeService.getById(id);
 
@@ -172,12 +240,21 @@ public class ViajeController {
         existente.setLatDestino(dto.getLatDestino());
         existente.setLngDestino(dto.getLngDestino());
 
-        return viajeService.save(existente);
+        Viaje saved = viajeService.update(existente);
+
+        return Map.of(
+                "id", saved.getId(),
+                "origen", saved.getOrigen(),
+                "destino", saved.getDestino(),
+                "estado", saved.getEstado(),
+                "precio", saved.getPrecio(),
+                "asientosDisponibles", saved.getAsientosDisponibles()
+        );
     }
 
     // PATCH parcial
     @PatchMapping("/{id}")
-    public Viaje actualizarParcial(@PathVariable Long id, @RequestBody ViajeDTO dto) {
+    public Map<String, Object> actualizarParcial(@PathVariable Long id, @RequestBody ViajeDTO dto) {
 
         Viaje existente = viajeService.getById(id);
 
@@ -227,32 +304,15 @@ public class ViajeController {
         if (dto.getLatDestino() != null) existente.setLatDestino(dto.getLatDestino());
         if (dto.getLngDestino() != null) existente.setLngDestino(dto.getLngDestino());
 
-        return viajeService.save(existente);
-    }
+        Viaje saved = viajeService.update(existente);
 
-
-    @GetMapping("/disponibles")
-    public List<ViajeDisponibleDTO> buscarDisponibles(
-            @RequestParam(required = false) String origen,
-            @RequestParam(required = false) String destino,
-            @RequestParam(required = false) String fecha
-    ) {
-
-        return viajeService.getViajesDisponibles();
-    }
-
-
-    @PatchMapping("/finalizar/{id}")
-    public Viaje finalizar(@PathVariable Long id) {
-        return viajeService.finalizarViaje(id);
-    }
-
-    @GetMapping("/cercanos")
-    public List<ViajeCercanoDTO> buscarCercanos(
-            @RequestParam Double lat,
-            @RequestParam Double lng,
-            @RequestParam Double radio
-    ) {
-        return viajeService.buscarCercanos(lat, lng, radio);
+        return Map.of(
+                "id", saved.getId(),
+                "origen", saved.getOrigen(),
+                "destino", saved.getDestino(),
+                "estado", saved.getEstado(),
+                "precio", saved.getPrecio(),
+                "asientosDisponibles", saved.getAsientosDisponibles()
+        );
     }
 }

@@ -44,10 +44,11 @@ public class ReservaController {
 
             dto.setUsuarioNombre(r.getUsuario().getNombre());
             dto.setUsuarioEmail(r.getUsuario().getEmail());
+            dto.setConductorNombre(r.getViaje().getConductor().getUsuario().getNombre());
 
             dto.setOrigen(r.getViaje().getOrigen());
             dto.setDestino(r.getViaje().getDestino());
-            dto.setFecha(r.getViaje().getFecha().toString());
+            dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
             dto.setPrecio(r.getViaje().getPrecio());
 
             return dto;
@@ -74,10 +75,11 @@ public class ReservaController {
 
             dto.setUsuarioNombre(r.getUsuario().getNombre());
             dto.setUsuarioEmail(r.getUsuario().getEmail());
+            dto.setConductorNombre(r.getViaje().getConductor().getUsuario().getNombre());
 
             dto.setOrigen(r.getViaje().getOrigen());
             dto.setDestino(r.getViaje().getDestino());
-            dto.setFecha(r.getViaje().getFecha().toString());
+            dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
             dto.setPrecio(r.getViaje().getPrecio());
 
             return dto;
@@ -117,10 +119,11 @@ public class ReservaController {
 
         response.setUsuarioNombre(reserva.getUsuario().getNombre());
         response.setUsuarioEmail(reserva.getUsuario().getEmail());
+        response.setConductorNombre(reserva.getViaje().getConductor().getUsuario().getNombre());
 
         response.setOrigen(reserva.getViaje().getOrigen());
         response.setDestino(reserva.getViaje().getDestino());
-        response.setFecha(reserva.getViaje().getFecha().toString());
+        response.setFechaSalida(reserva.getViaje().getFechaSalida() != null ? reserva.getViaje().getFechaSalida().toString() : null);
         response.setPrecio(reserva.getViaje().getPrecio());
 
         return response;
@@ -157,7 +160,7 @@ public class ReservaController {
 
         response.setOrigen(reserva.getViaje().getOrigen());
         response.setDestino(reserva.getViaje().getDestino());
-        response.setFecha(reserva.getViaje().getFecha().toString());
+        response.setFechaSalida(reserva.getViaje().getFechaSalida() != null ? reserva.getViaje().getFechaSalida().toString() : null);
         response.setPrecio(reserva.getViaje().getPrecio());
 
         return response;
@@ -209,10 +212,11 @@ public class ReservaController {
 
                     dto.setUsuarioNombre(r.getUsuario().getNombre());
                     dto.setUsuarioEmail(r.getUsuario().getEmail());
+                    dto.setConductorNombre(r.getViaje().getConductor().getUsuario().getNombre());
 
                     dto.setOrigen(r.getViaje().getOrigen());
                     dto.setDestino(r.getViaje().getDestino());
-                    dto.setFecha(r.getViaje().getFecha().toString());
+                    dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
                     dto.setPrecio(r.getViaje().getPrecio());
 
                     return dto;
