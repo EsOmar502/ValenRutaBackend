@@ -3,31 +3,39 @@ package progresa.proyectovalenruta;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
+
+import java.util.List;
 
 @Configuration
 public class CorsConfig {
 
     @Bean
-    public CorsFilter corsFilter() {
+    public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.addAllowedOrigin("http://localhost:8100");
-        config.addAllowedOrigin("http://localhost:4200");
+        // Permitir localhost, IP local, ngrok, móvil, etc.
+        config.addAllowedOriginPattern("*");
 
-        config.addAllowedHeader("*");
+        // Headers permitidos
+        config.setAllowedHeaders(List.of("*"));
 
-        config.addAllowedMethod("*");
+        // Métodos permitidos
+        config.setAllowedMethods(List.of("*"));
 
+        // JWT / cookies / auth
         config.setAllowCredentials(true);
+
+        // Exponer Authorization
+        config.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration("/**", config);
 
-        return new CorsFilter(source);
+        return source;
     }
 }
