@@ -103,34 +103,31 @@ public class VehiculoController {
     }
 
     @GetMapping("/mis-vehiculos")
-    public Vehiculo miVehiculo(Authentication auth) {
+    public List<Vehiculo> miVehiculo(Authentication auth) {
 
-        String email = auth.getName();
+        try {
 
-        Usuario usuario = usuarioService.findByEmail(email);
+            String email = auth.getName();
 
-        if (usuario == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
-                    "Usuario no encontrado"
-            );
+            System.out.println("EMAIL TOKEN: " + email);
+
+            Usuario usuario = usuarioService.findByEmail(email);
+
+            System.out.println("USUARIO ID: " + usuario.getId());
+
+            List<Vehiculo> vehiculos = vehiculoService.getByUsuario(usuario.getId());
+
+            System.out.println("PASO QUERY");
+
+            return vehiculos;
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            throw e;
         }
-
-        System.out.println("EMAIL TOKEN: " + auth.getName());
-        System.out.println("USUARIO ID: " + usuario.getId());
-
-        Vehiculo vehiculo = vehiculoService.getByUsuario(usuario.getId());
-
-        if (vehiculo == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "No tiene vehículo"
-            );
-        }
-
-        return vehiculo;
     }
-
     // 🔒 PATCH parcial
     @PatchMapping("/{id}")
     public Vehiculo actualizarParcial(@PathVariable Long id,

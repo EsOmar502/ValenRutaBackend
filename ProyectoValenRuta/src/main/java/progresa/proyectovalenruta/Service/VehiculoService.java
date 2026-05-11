@@ -29,16 +29,16 @@ public class VehiculoService {
         return vehiculoDAO.findById(id).orElse(null);
     }
 
-    public Vehiculo getByUsuario(Long usuarioId) {
+    public List<Vehiculo> getByUsuario(Long usuarioId) {
 
-        System.out.println("BUSCANDO VEHICULO PARA USUARIO: " + usuarioId);
+        System.out.println("BUSCANDO VEHICULOS PARA USUARIO: " + usuarioId);
 
-        Vehiculo vehiculo = vehiculoDAO.findByUsuario_Id(usuarioId)
-                .orElse(null);
+        List<Vehiculo> vehiculos =
+                vehiculoDAO.findAllByUsuario_Id(usuarioId);
 
-        System.out.println("VEHICULO ENCONTRADO: " + vehiculo);
+        System.out.println("TOTAL VEHICULOS: " + vehiculos.size());
 
-        return vehiculo;
+        return vehiculos;
     }
 
     public Vehiculo save(Vehiculo vehiculo) {

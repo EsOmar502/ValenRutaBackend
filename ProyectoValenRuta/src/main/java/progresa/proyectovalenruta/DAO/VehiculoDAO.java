@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import progresa.proyectovalenruta.Entity.Vehiculo;
 
 
+import java.util.List;
 import java.util.Optional;
 
 public interface VehiculoDAO extends JpaRepository<Vehiculo, Long> {
@@ -12,5 +13,5 @@ public interface VehiculoDAO extends JpaRepository<Vehiculo, Long> {
 
     boolean existsByPlacaAndIdNot(String placa, Long id);
 
-    Optional<Vehiculo> findByUsuario_Id(Long usuarioId);
+    List<Vehiculo> findAllByUsuario_Id(Long usuarioId);
 }
