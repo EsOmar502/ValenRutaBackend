@@ -1,5 +1,6 @@
 package progresa.proyectovalenruta.Controller;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -17,7 +18,6 @@ import progresa.proyectovalenruta.Service.UsuarioService;
 import progresa.proyectovalenruta.Service.ViajeService;
 import progresa.proyectovalenruta.DTO.ViajeCercanoDTO;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -41,17 +41,17 @@ public class ViajeController {
         return viajeService.getDetalleViaje(id);
     }
 
-    // 🔓 GET
+    // GET todos
     @GetMapping
     public List<Viaje> listar() {
         return viajeService.getAll();
     }
 
-    // 🔒 CREATE (mantengo tu lógica actual)
+    // POST crear viaje
     @PostMapping
-    public Viaje crear(@RequestBody ViajeDTO dto) {
+    public Viaje crear(@Valid @RequestBody ViajeDTO dto) {
 
-        // 🔐 1. Usuario desde JWT
+        // 1. Usuario desde JWT
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
 
@@ -64,10 +64,10 @@ public class ViajeController {
             );
         }
 
-        // 🔥 2. Obtener conductor del usuario
+        // 2. Obtener conductor del usuario
         Conductor conductor = conductorService.getByUsuarioId(usuario.getId());
 
-        // 🔒 3. Validar verificación
+        // 3. Validar verificación
         if (!conductor.isVerificado()) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
@@ -75,33 +75,41 @@ public class ViajeController {
             );
         }
 
-        // 🧾 4. Validaciones
+        // 4. Validaciones adicionales
         if (dto.getAsientosDisponibles() == null || dto.getAsientosDisponibles() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Los asientos deben ser mayores que 0");
         }
 
-        if (dto.getPrecio() <= 0) {
+        if (dto.getAsientosDisponibles() > 4) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Máximo 4 pasajeros por viaje");
+        }
+
+        if (dto.getPrecio() == null || dto.getPrecio() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El precio debe ser mayor que 0");
         }
 
-        // 🚗 5. Crear viaje
+        if (dto.getFechaSalida() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de salida es obligatoria");
+        }
+
+        // 5. Crear viaje
         Viaje v = new Viaje();
         v.setOrigen(dto.getOrigen());
         v.setDestino(dto.getDestino());
-        v.setFecha(dto.getFecha());
+        v.setFechaSalida(dto.getFechaSalida());
         v.setPrecio(dto.getPrecio());
         v.setAsientosDisponibles(dto.getAsientosDisponibles());
         v.setConductor(conductor);
 
-        v.setOrigenLat(dto.getOrigenLat());
-        v.setOrigenLng(dto.getOrigenLng());
-        v.setDestinoLat(dto.getDestinoLat());
-        v.setDestinoLng(dto.getDestinoLng());
+        v.setLatOrigen(dto.getLatOrigen());
+        v.setLngOrigen(dto.getLngOrigen());
+        v.setLatDestino(dto.getLatDestino());
+        v.setLngDestino(dto.getLngDestino());
 
         return viajeService.save(v);
     }
 
-    // 🔒 DELETE seguro
+    // DELETE seguro
     @DeleteMapping("/{id}")
     public void eliminar(@PathVariable Long id) {
 
@@ -121,9 +129,9 @@ public class ViajeController {
         viajeService.delete(id);
     }
 
-    // 🔒 PUT (CORREGIDO)
+    // PUT actualización completa
     @PutMapping("/{id}")
-    public Viaje actualizar(@PathVariable Long id, @RequestBody ViajeDTO dto) {
+    public Viaje actualizar(@PathVariable Long id, @Valid @RequestBody ViajeDTO dto) {
 
         Viaje existente = viajeService.getById(id);
 
@@ -131,7 +139,7 @@ public class ViajeController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Viaje no encontrado");
         }
 
-        // 🔐 VALIDAR PROPIETARIO
+        // VALIDAR PROPIETARIO
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
 
@@ -144,21 +152,30 @@ public class ViajeController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Los asientos deben ser mayores que 0");
         }
 
-        if (dto.getPrecio() <= 0) {
+        if (dto.getAsientosDisponibles() > 4) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Máximo 4 pasajeros por viaje");
+        }
+
+        if (dto.getPrecio() == null || dto.getPrecio() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El precio debe ser mayor que 0");
         }
 
-        // 🔥 IMPORTANTE: NO CAMBIAR CONDUCTOR
+        // NO CAMBIAR CONDUCTOR
         existente.setOrigen(dto.getOrigen());
         existente.setDestino(dto.getDestino());
-        existente.setFecha(dto.getFecha());
+        existente.setFechaSalida(dto.getFechaSalida());
         existente.setPrecio(dto.getPrecio());
         existente.setAsientosDisponibles(dto.getAsientosDisponibles());
+
+        existente.setLatOrigen(dto.getLatOrigen());
+        existente.setLngOrigen(dto.getLngOrigen());
+        existente.setLatDestino(dto.getLatDestino());
+        existente.setLngDestino(dto.getLngDestino());
 
         return viajeService.save(existente);
     }
 
-    // 🔒 PATCH (CORREGIDO)
+    // PATCH parcial
     @PatchMapping("/{id}")
     public Viaje actualizarParcial(@PathVariable Long id, @RequestBody ViajeDTO dto) {
 
@@ -168,7 +185,7 @@ public class ViajeController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Viaje no encontrado");
         }
 
-        // 🔐 VALIDAR PROPIETARIO
+        // VALIDAR PROPIETARIO
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
 
@@ -184,11 +201,11 @@ public class ViajeController {
             existente.setDestino(dto.getDestino());
         }
 
-        if (dto.getFecha() != null) {
-            existente.setFecha(dto.getFecha());
+        if (dto.getFechaSalida() != null) {
+            existente.setFechaSalida(dto.getFechaSalida());
         }
 
-        if (dto.getPrecio() != 0) {
+        if (dto.getPrecio() != null) {
             if (dto.getPrecio() <= 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El precio debe ser mayor que 0");
             }
@@ -199,8 +216,16 @@ public class ViajeController {
             if (dto.getAsientosDisponibles() <= 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Los asientos deben ser mayores que 0");
             }
+            if (dto.getAsientosDisponibles() > 4) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Máximo 4 pasajeros por viaje");
+            }
             existente.setAsientosDisponibles(dto.getAsientosDisponibles());
         }
+
+        if (dto.getLatOrigen() != null) existente.setLatOrigen(dto.getLatOrigen());
+        if (dto.getLngOrigen() != null) existente.setLngOrigen(dto.getLngOrigen());
+        if (dto.getLatDestino() != null) existente.setLatDestino(dto.getLatDestino());
+        if (dto.getLngDestino() != null) existente.setLngDestino(dto.getLngDestino());
 
         return viajeService.save(existente);
     }

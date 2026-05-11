@@ -4,18 +4,17 @@ package progresa.proyectovalenruta.DTO;
 public class ViajeDisponibleDTO {
 
     private Long id;
-
     private String origen;
-
     private String destino;
-
-    private String fecha;
-
+    private String fechaSalida;
     private Double precio;
-
     private Integer asientosDisponibles;
-
     private String conductorNombre;
+
+    private Double latOrigen;
+    private Double lngOrigen;
+    private Double latDestino;
+    private Double lngDestino;
 
     public ViajeDisponibleDTO() {
     }
@@ -24,73 +23,49 @@ public class ViajeDisponibleDTO {
             Long id,
             String origen,
             String destino,
-            String fecha,
+            String fechaSalida,
             Double precio,
             Integer asientosDisponibles,
-            String conductorNombre
+            String conductorNombre,
+            Double latOrigen,
+            Double lngOrigen,
+            Double latDestino,
+            Double lngDestino
     ) {
         this.id = id;
         this.origen = origen;
         this.destino = destino;
-        this.fecha = fecha;
+        this.fechaSalida = fechaSalida;
         this.precio = precio;
         this.asientosDisponibles = asientosDisponibles;
         this.conductorNombre = conductorNombre;
+        this.latOrigen = latOrigen;
+        this.lngOrigen = lngOrigen;
+        this.latDestino = latDestino;
+        this.lngDestino = lngDestino;
     }
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public String getOrigen() { return origen; }
+    public String getDestino() { return destino; }
+    public String getFechaSalida() { return fechaSalida; }
+    public Double getPrecio() { return precio; }
+    public Integer getAsientosDisponibles() { return asientosDisponibles; }
+    public String getConductorNombre() { return conductorNombre; }
+    public Double getLatOrigen() { return latOrigen; }
+    public Double getLngOrigen() { return lngOrigen; }
+    public Double getLatDestino() { return latDestino; }
+    public Double getLngDestino() { return lngDestino; }
 
-    public String getOrigen() {
-        return origen;
-    }
-
-    public String getDestino() {
-        return destino;
-    }
-
-    public String getFecha() {
-        return fecha;
-    }
-
-    public Double getPrecio() {
-        return precio;
-    }
-
-    public Integer getAsientosDisponibles() {
-        return asientosDisponibles;
-    }
-
-    public String getConductorNombre() {
-        return conductorNombre;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public void setOrigen(String origen) {
-        this.origen = origen;
-    }
-
-    public void setDestino(String destino) {
-        this.destino = destino;
-    }
-
-    public void setFecha(String fecha) {
-        this.fecha = fecha;
-    }
-
-    public void setPrecio(Double precio) {
-        this.precio = precio;
-    }
-
-    public void setAsientosDisponibles(Integer asientosDisponibles) {
-        this.asientosDisponibles = asientosDisponibles;
-    }
-
-    public void setConductorNombre(String conductorNombre) {
-        this.conductorNombre = conductorNombre;
-    }
+    public void setId(Long id) { this.id = id; }
+    public void setOrigen(String origen) { this.origen = origen; }
+    public void setDestino(String destino) { this.destino = destino; }
+    public void setFechaSalida(String fechaSalida) { this.fechaSalida = fechaSalida; }
+    public void setPrecio(Double precio) { this.precio = precio; }
+    public void setAsientosDisponibles(Integer asientosDisponibles) { this.asientosDisponibles = asientosDisponibles; }
+    public void setConductorNombre(String conductorNombre) { this.conductorNombre = conductorNombre; }
+    public void setLatOrigen(Double latOrigen) { this.latOrigen = latOrigen; }
+    public void setLngOrigen(Double lngOrigen) { this.lngOrigen = lngOrigen; }
+    public void setLatDestino(Double latDestino) { this.latDestino = latDestino; }
+    public void setLngDestino(Double lngDestino) { this.lngDestino = lngDestino; }
 }
