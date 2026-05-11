@@ -11,6 +11,7 @@ import progresa.proyectovalenruta.Entity.Usuario;
 import progresa.proyectovalenruta.Entity.Vehiculo;
 import progresa.proyectovalenruta.Service.UsuarioService;
 import progresa.proyectovalenruta.Service.VehiculoService;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -99,6 +100,35 @@ public class VehiculoController {
         existente.setColor(vehiculo.getColor());
 
         return vehiculoService.save(existente);
+    }
+
+    @GetMapping("/mis-vehiculos")
+    public Vehiculo miVehiculo(Authentication auth) {
+
+        String email = auth.getName();
+
+        Usuario usuario = usuarioService.findByEmail(email);
+
+        if (usuario == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Usuario no encontrado"
+            );
+        }
+
+        System.out.println("EMAIL TOKEN: " + auth.getName());
+        System.out.println("USUARIO ID: " + usuario.getId());
+
+        Vehiculo vehiculo = vehiculoService.getByUsuario(usuario.getId());
+
+        if (vehiculo == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "No tiene vehículo"
+            );
+        }
+
+        return vehiculo;
     }
 
     // 🔒 PATCH parcial
