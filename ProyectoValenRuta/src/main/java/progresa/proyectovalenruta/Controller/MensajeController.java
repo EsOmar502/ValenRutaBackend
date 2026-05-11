@@ -1,16 +1,20 @@
 package progresa.proyectovalenruta.Controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import progresa.proyectovalenruta.DTO.ConversacionDTO;
 import progresa.proyectovalenruta.DTO.MensajeDTO;
+import progresa.proyectovalenruta.DTO.MensajeResponseDTO;
 import progresa.proyectovalenruta.Entity.Usuario;
-import progresa.proyectovalenruta.Entity.Mensaje;
-import progresa.proyectovalenruta.Service.UsuarioService;
 import progresa.proyectovalenruta.Service.MensajeService;
+import progresa.proyectovalenruta.Service.UsuarioService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/mensajes")
@@ -23,27 +27,63 @@ public class MensajeController {
     @Autowired
     private UsuarioService usuarioService;
 
-    @GetMapping
-    public List<Mensaje> listar(Authentication authentication) {
+    // ── Fixed routes FIRST ──────────────────────
 
-        String email = authentication.getName();
+    // GET conversations list
+    @GetMapping("/conversaciones")
+    public List<ConversacionDTO> getConversaciones() {
 
-        return mensajeService.getMensajesUsuario(email);
+        Usuario usuario = getAuthenticatedUser();
+        return mensajeService.getConversaciones(usuario.getId());
     }
 
+    // GET unread count (for badge)
+    @GetMapping("/no-leidos")
+    public Map<String, Integer> getNoLeidos() {
+
+        Usuario usuario = getAuthenticatedUser();
+        int count = mensajeService.countNoLeidos(usuario.getId());
+        return Map.of("noLeidos", count);
+    }
+
+    // POST send message
     @PostMapping
-    public Mensaje crear(@RequestBody MensajeDTO dto) {
+    public MensajeResponseDTO crear(@RequestBody MensajeDTO dto) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
-        System.out.println("RECEPTOR ID: " + dto.getReceptorId());
 
         return mensajeService.enviarMensaje(
                 email,
                 dto.getReceptorId(),
                 dto.getContenido()
         );
+    }
 
+    // ── Path variable routes AFTER ──────────────
 
+    // GET conversation with specific user
+    @GetMapping("/conversacion/{usuarioId}")
+    public List<MensajeResponseDTO> getConversacion(@PathVariable Long usuarioId) {
+
+        Usuario usuario = getAuthenticatedUser();
+        return mensajeService.getConversacion(usuario.getId(), usuarioId);
+    }
+
+    // ── Helper ──────────────────────────────────
+    private Usuario getAuthenticatedUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+
+        Usuario usuario = usuarioService.findByEmail(email);
+
+        if (usuario == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Usuario no encontrado"
+            );
+        }
+
+        return usuario;
     }
 }

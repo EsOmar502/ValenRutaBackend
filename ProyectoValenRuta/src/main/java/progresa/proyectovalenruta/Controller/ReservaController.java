@@ -45,7 +45,7 @@ public class ReservaController {
             dto.setUsuarioNombre(r.getUsuario().getNombre());
             dto.setUsuarioEmail(r.getUsuario().getEmail());
             dto.setConductorNombre(r.getViaje().getConductor().getUsuario().getNombre());
-
+            dto.setConductorId(r.getViaje().getConductor().getUsuario().getId());
             dto.setOrigen(r.getViaje().getOrigen());
             dto.setDestino(r.getViaje().getDestino());
             dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
@@ -76,7 +76,7 @@ public class ReservaController {
             dto.setUsuarioNombre(r.getUsuario().getNombre());
             dto.setUsuarioEmail(r.getUsuario().getEmail());
             dto.setConductorNombre(r.getViaje().getConductor().getUsuario().getNombre());
-
+            dto.setConductorId(r.getViaje().getConductor().getUsuario().getId());
             dto.setOrigen(r.getViaje().getOrigen());
             dto.setDestino(r.getViaje().getDestino());
             dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
@@ -120,7 +120,7 @@ public class ReservaController {
         response.setUsuarioNombre(reserva.getUsuario().getNombre());
         response.setUsuarioEmail(reserva.getUsuario().getEmail());
         response.setConductorNombre(reserva.getViaje().getConductor().getUsuario().getNombre());
-
+        response.setConductorId(reserva.getViaje().getConductor().getUsuario().getId());
         response.setOrigen(reserva.getViaje().getOrigen());
         response.setDestino(reserva.getViaje().getDestino());
         response.setFechaSalida(reserva.getViaje().getFechaSalida() != null ? reserva.getViaje().getFechaSalida().toString() : null);
@@ -213,6 +213,7 @@ public class ReservaController {
                     dto.setUsuarioNombre(r.getUsuario().getNombre());
                     dto.setUsuarioEmail(r.getUsuario().getEmail());
                     dto.setConductorNombre(r.getViaje().getConductor().getUsuario().getNombre());
+                    dto.setConductorId(r.getViaje().getConductor().getUsuario().getId());
 
                     dto.setOrigen(r.getViaje().getOrigen());
                     dto.setDestino(r.getViaje().getDestino());

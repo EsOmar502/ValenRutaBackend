@@ -12,6 +12,7 @@ public class ReservaResponseDTO {
     private String usuarioEmail;
 
     private String conductorNombre;
+    private Long conductorId;
 
     private String origen;
     private String destino;

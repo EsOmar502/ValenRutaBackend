@@ -10,6 +10,7 @@ public class ViajeDisponibleDTO {
     private Double precio;
     private Integer asientosDisponibles;
     private String conductorNombre;
+    private Long conductorId;
 
     private Double latOrigen;
     private Double lngOrigen;
@@ -27,6 +28,7 @@ public class ViajeDisponibleDTO {
             Double precio,
             Integer asientosDisponibles,
             String conductorNombre,
+            Long conductorId,
             Double latOrigen,
             Double lngOrigen,
             Double latDestino,
@@ -39,6 +41,7 @@ public class ViajeDisponibleDTO {
         this.precio = precio;
         this.asientosDisponibles = asientosDisponibles;
         this.conductorNombre = conductorNombre;
+        this.conductorId = conductorId;
         this.latOrigen = latOrigen;
         this.lngOrigen = lngOrigen;
         this.latDestino = latDestino;
@@ -52,6 +55,7 @@ public class ViajeDisponibleDTO {
     public Double getPrecio() { return precio; }
     public Integer getAsientosDisponibles() { return asientosDisponibles; }
     public String getConductorNombre() { return conductorNombre; }
+    public Long getConductorId() { return conductorId; }
     public Double getLatOrigen() { return latOrigen; }
     public Double getLngOrigen() { return lngOrigen; }
     public Double getLatDestino() { return latDestino; }
@@ -64,6 +68,7 @@ public class ViajeDisponibleDTO {
     public void setPrecio(Double precio) { this.precio = precio; }
     public void setAsientosDisponibles(Integer asientosDisponibles) { this.asientosDisponibles = asientosDisponibles; }
     public void setConductorNombre(String conductorNombre) { this.conductorNombre = conductorNombre; }
+    public void setConductorId(Long conductorId) { this.conductorId = conductorId; }
     public void setLatOrigen(Double latOrigen) { this.latOrigen = latOrigen; }
     public void setLngOrigen(Double lngOrigen) { this.lngOrigen = lngOrigen; }
     public void setLatDestino(Double latDestino) { this.latDestino = latDestino; }
