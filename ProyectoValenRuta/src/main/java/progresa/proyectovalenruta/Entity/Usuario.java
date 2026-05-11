@@ -2,6 +2,7 @@ package progresa.proyectovalenruta.Entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.ToString;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.List;
 public class Usuario {
 
     @JsonIgnore
+    @ToString.Exclude
     @OneToMany(mappedBy = "usuario")
     private List<Reserva> reservas;
 
@@ -28,6 +30,7 @@ public class Usuario {
 
     private String telefono;
 
+    @ToString.Exclude
     @OneToOne(mappedBy = "usuario")
     private Conductor conductor;
 
