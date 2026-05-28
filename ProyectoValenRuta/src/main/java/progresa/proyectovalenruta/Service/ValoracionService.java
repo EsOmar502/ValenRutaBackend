@@ -4,15 +4,25 @@ import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import progresa.proyectovalenruta.DAO.ConductorDAO;
 import progresa.proyectovalenruta.DAO.ReservaDAO;
 import progresa.proyectovalenruta.DAO.UsuarioDAO;
 import progresa.proyectovalenruta.DAO.ValoracionDAO;
 import progresa.proyectovalenruta.DAO.ViajeDAO;
+import progresa.proyectovalenruta.DTO.CrearValoracionDTO;
+import progresa.proyectovalenruta.DTO.ValoracionResponseDTO;
+import progresa.proyectovalenruta.Entity.Conductor;
+import progresa.proyectovalenruta.Entity.EstadoReserva;
+import progresa.proyectovalenruta.Entity.Reserva;
 import progresa.proyectovalenruta.Entity.Usuario;
 import progresa.proyectovalenruta.Entity.Valoracion;
 import progresa.proyectovalenruta.Entity.Viaje;
 
+
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ValoracionService {
@@ -21,145 +31,133 @@ public class ValoracionService {
     private final UsuarioDAO usuarioDAO;
     private final ViajeDAO viajeDAO;
     private final ReservaDAO reservaDAO;
+    private final ConductorDAO conductorDAO;
+
 
     public ValoracionService(
             ValoracionDAO valoracionDAO,
             UsuarioDAO usuarioDAO,
             ViajeDAO viajeDAO,
-            ReservaDAO reservaDAO
+            ReservaDAO reservaDAO,
+            ConductorDAO conductorDAO
     ) {
         this.valoracionDAO = valoracionDAO;
         this.usuarioDAO = usuarioDAO;
         this.viajeDAO = viajeDAO;
         this.reservaDAO = reservaDAO;
+        this.conductorDAO = conductorDAO;
     }
-
-
-    public List<Valoracion> getAll() {
-        return valoracionDAO.findAll();
-    }
-
-    public Valoracion getById(Long id) {
-        return valoracionDAO.findById(id)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Valoración no encontrada"
-                        )
-                );
-    }
-
 
     @Transactional
-    public Valoracion crearValoracionDesdeToken(
-            String email,
-            Long evaluadoId,
-            Long viajeId,
-            int puntuacion,
-            String comentario
-    ) {
+    public ValoracionResponseDTO crearValoracion(CrearValoracionDTO dto, Long usuarioId) {
+        Usuario usuarioQueValora = usuarioDAO.findById(usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
 
-        Usuario evaluador = usuarioDAO.findByEmail(email)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Evaluador no encontrado"
-                        )
-                );
+        Viaje viaje = viajeDAO.findById(dto.getViajeId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Viaje no encontrado"));
 
-        Usuario evaluado = usuarioDAO.findById(evaluadoId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Evaluado no encontrado"
-                        )
-                );
+        Usuario usuarioValorado = null;
+        boolean esConductor = viaje.getConductor().getUsuario().getId().equals(usuarioId);
 
-        Viaje viaje = viajeDAO.findById(viajeId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Viaje no encontrado"
-                        )
-                );
-
-        if (evaluador.getId().equals(evaluado.getId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "No puedes valorarte a ti mismo"
-            );
+        if (dto.getUsuarioValoradoId() != null) {
+            usuarioValorado = usuarioDAO.findById(dto.getUsuarioValoradoId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario valorado no encontrado"));
+        } else {
+            // Retrocompatibilidad: Si no se envía usuarioValoradoId, asumimos que el pasajero valora al conductor
+            if (esConductor) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El conductor debe especificar a qué pasajero valora");
+            }
+            usuarioValorado = viaje.getConductor().getUsuario();
         }
 
-        boolean esConductor = viaje.getConductor() != null &&
-                viaje.getConductor().getUsuario() != null &&
-                viaje.getConductor().getUsuario().getId().equals(evaluador.getId());
-
-        boolean esPasajero = reservaDAO.existsByUsuarioAndViaje(evaluador, viaje);
-
-        if (!esConductor && !esPasajero) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "No participaste en este viaje"
-            );
+        if (usuarioQueValora.getId().equals(usuarioValorado.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No puedes valorarte a ti mismo");
         }
 
-        boolean yaExiste = valoracionDAO
-                .existsByEvaluadorAndEvaluadoAndViaje(evaluador, evaluado, viaje);
+        if (!"FINALIZADO".equals(viaje.getEstado().name())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El viaje aún no ha finalizado");
+        }
 
+        final Long usuarioValoradoId = usuarioValorado.getId();
+
+        // Validate relationship based on roles
+        if (esConductor) {
+            // El conductor valora a un pasajero
+            boolean esPasajero = reservaDAO.findByViaje_Id(viaje.getId()).stream()
+                    .anyMatch(r -> r.getUsuario().getId().equals(usuarioValoradoId) && r.getEstado() == EstadoReserva.FINALIZADA);
+            
+            if (!esPasajero) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El usuario valorado no es un pasajero finalizado de este viaje");
+            }
+        } else {
+            // El pasajero valora al conductor
+            if (!viaje.getConductor().getUsuario().getId().equals(usuarioValorado.getId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Como pasajero solo puedes valorar al conductor de este viaje");
+            }
+            // Verificar que el usuarioQueValora fue pasajero
+            boolean fuiPasajero = reservaDAO.findByViaje_Id(viaje.getId()).stream()
+                    .anyMatch(r -> r.getUsuario().getId().equals(usuarioQueValora.getId()) && r.getEstado() == EstadoReserva.FINALIZADA);
+            
+            if (!fuiPasajero) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No fuiste pasajero de este viaje o tu reserva no está finalizada");
+            }
+        }
+
+        boolean yaExiste = valoracionDAO.existsByUsuarioQueValora_IdAndUsuarioValorado_IdAndViaje_Id(usuarioId, usuarioValorado.getId(), viaje.getId());
         if (yaExiste) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Ya has valorado a este usuario en este viaje"
-            );
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya has valorado a este usuario en este viaje");
         }
 
         Valoracion valoracion = new Valoracion();
-        valoracion.setEvaluador(evaluador);
-        valoracion.setEvaluado(evaluado);
+        valoracion.setUsuarioQueValora(usuarioQueValora);
+        valoracion.setUsuarioValorado(usuarioValorado);
         valoracion.setViaje(viaje);
-        valoracion.setPuntuacion(puntuacion);
-        valoracion.setComentario(comentario);
+        valoracion.setPuntuacion(dto.getPuntuacion());
+        valoracion.setComentario(dto.getComentario());
 
-        return valoracionDAO.save(valoracion);
+        Valoracion saved = valoracionDAO.save(valoracion);
+
+        actualizarRatingUsuario(usuarioValorado);
+
+        return toResponseDTO(saved);
     }
 
-
-
-    @Transactional
-    public Valoracion save(Valoracion valoracion) {
-        return valoracionDAO.save(valoracion);
-    }
-
-
-
-    public void delete(Long id) {
-        Valoracion valoracion = getById(id);
-        valoracionDAO.delete(valoracion);
-    }
-
-    @Transactional
-    public Valoracion eliminarComentario(Long id, String email) {
-
-        Valoracion valoracion = valoracionDAO.findById(id)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND,
-                                "Valoración no encontrada"
-                        )
-                );
-
-        if (!valoracion.getEvaluador()
-                .getEmail()
-                .equalsIgnoreCase(email)) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "No autorizado"
-            );
+    private void actualizarRatingUsuario(Usuario usuario) {
+        List<Valoracion> valoraciones = valoracionDAO.findByUsuarioValorado_Id(usuario.getId());
+        if (!valoraciones.isEmpty()) {
+            double sum = valoraciones.stream().mapToDouble(Valoracion::getPuntuacion).sum();
+            double average = sum / valoraciones.size();
+            // Round to 1 decimal place
+            average = Math.round(average * 10.0) / 10.0;
+            
+            usuario.setRating(average);
+            usuarioDAO.save(usuario);
         }
+    }
 
-        valoracion.setComentario(null);
+    public List<ValoracionResponseDTO> getValoracionesPorConductor(Long conductorId) {
+        Conductor conductor = conductorDAO.findById(conductorId).orElse(null);
+        if (conductor == null) return List.of();
+        
+        return valoracionDAO.findByUsuarioValorado_Id(conductor.getUsuario().getId()).stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+    }
 
-        return valoracionDAO.save(valoracion);
+    public List<ValoracionResponseDTO> getValoracionesPorUsuario(Long usuarioId) {
+        return valoracionDAO.findByUsuarioValorado_Id(usuarioId).stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    private ValoracionResponseDTO toResponseDTO(Valoracion v) {
+        ValoracionResponseDTO dto = new ValoracionResponseDTO();
+        dto.setUsuarioNombre(v.getUsuarioQueValora().getNombre());
+        dto.setPuntuacion(v.getPuntuacion());
+        dto.setComentario(v.getComentario());
+        dto.setFecha(v.getFechaCreacion() != null ? v.getFechaCreacion().toString() : null);
+        dto.setUsuarioValoradoId(v.getUsuarioValorado().getId());
+        dto.setUsuarioQueValoraId(v.getUsuarioQueValora().getId());
+        return dto;
     }
 }

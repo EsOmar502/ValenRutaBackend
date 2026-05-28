@@ -45,14 +45,15 @@ public class Viaje {
     @NotNull(message = "La fecha de salida es obligatoria")
     private LocalDateTime fechaSalida;
 
-    private String estado;
+    @Enumerated(EnumType.STRING)
+    private EstadoViaje estado;
 
     @NotNull(message = "El precio es obligatorio")
     @DecimalMin(value = "0.01", message = "El precio debe ser mayor que 0")
     private Double precio;
 
     @NotNull(message = "Los asientos disponibles son obligatorios")
-    @Min(value = 1, message = "Mínimo 1 asiento")
+    @Min(value = 0, message = "Los asientos no pueden ser negativos")
     @Max(value = 4, message = "Máximo 4 asientos")
     private Integer asientosDisponibles;
 

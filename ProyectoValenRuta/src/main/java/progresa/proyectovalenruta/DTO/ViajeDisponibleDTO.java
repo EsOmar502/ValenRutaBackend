@@ -16,6 +16,10 @@ public class ViajeDisponibleDTO {
     private Double lngOrigen;
     private Double latDestino;
     private Double lngDestino;
+    private String estado;
+    private boolean completo;
+    private boolean puedeIniciar;
+    private boolean puedeFinalizar;
 
     public ViajeDisponibleDTO() {
     }
@@ -32,7 +36,10 @@ public class ViajeDisponibleDTO {
             Double latOrigen,
             Double lngOrigen,
             Double latDestino,
-            Double lngDestino
+            Double lngDestino,
+            String estado,
+            boolean puedeIniciar,
+            boolean puedeFinalizar
     ) {
         this.id = id;
         this.origen = origen;
@@ -46,6 +53,10 @@ public class ViajeDisponibleDTO {
         this.lngOrigen = lngOrigen;
         this.latDestino = latDestino;
         this.lngDestino = lngDestino;
+        this.estado = estado;
+        this.completo = (asientosDisponibles != null && asientosDisponibles <= 0);
+        this.puedeIniciar = puedeIniciar;
+        this.puedeFinalizar = puedeFinalizar;
     }
 
     public Long getId() { return id; }
@@ -73,4 +84,12 @@ public class ViajeDisponibleDTO {
     public void setLngOrigen(Double lngOrigen) { this.lngOrigen = lngOrigen; }
     public void setLatDestino(Double latDestino) { this.latDestino = latDestino; }
     public void setLngDestino(Double lngDestino) { this.lngDestino = lngDestino; }
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
+    public boolean isCompleto() { return completo; }
+    public void setCompleto(boolean completo) { this.completo = completo; }
+    public boolean isPuedeIniciar() { return puedeIniciar; }
+    public void setPuedeIniciar(boolean puedeIniciar) { this.puedeIniciar = puedeIniciar; }
+    public boolean isPuedeFinalizar() { return puedeFinalizar; }
+    public void setPuedeFinalizar(boolean puedeFinalizar) { this.puedeFinalizar = puedeFinalizar; }
 }

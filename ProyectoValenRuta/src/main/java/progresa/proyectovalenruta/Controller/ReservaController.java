@@ -34,27 +34,19 @@ public class ReservaController {
     @Autowired
     private UsuarioService usuarioService;
 
+    // ═══════════════════════════════════════════════
+    // LISTAR TODAS
+    // ═══════════════════════════════════════════════
     @GetMapping
     public List<ReservaResponseDTO> listar() {
-        return reservaService.getAll().stream().map(r -> {
-            ReservaResponseDTO dto = new ReservaResponseDTO();
-
-            dto.setId(r.getId());
-            dto.setAsientosReservados(r.getAsientosReservados());
-
-            dto.setUsuarioNombre(r.getUsuario().getNombre());
-            dto.setUsuarioEmail(r.getUsuario().getEmail());
-            dto.setConductorNombre(r.getViaje().getConductor().getUsuario().getNombre());
-            dto.setConductorId(r.getViaje().getConductor().getUsuario().getId());
-            dto.setOrigen(r.getViaje().getOrigen());
-            dto.setDestino(r.getViaje().getDestino());
-            dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
-            dto.setPrecio(r.getViaje().getPrecio());
-
-            return dto;
-        }).toList();
+        return reservaService.getAll().stream()
+                .map(reservaService::toResponseDTO)
+                .toList();
     }
 
+    // ═══════════════════════════════════════════════
+    // MIS RESERVAS (TODAS del usuario)
+    // ═══════════════════════════════════════════════
     @GetMapping("/mis")
     public List<ReservaResponseDTO> misReservas() {
 
@@ -67,25 +59,14 @@ public class ReservaController {
                         "Usuario no encontrado"
                 ));
 
-        return reservaService.getByUsuarioId(usuario.getId()).stream().map(r -> {
-            ReservaResponseDTO dto = new ReservaResponseDTO();
-
-            dto.setId(r.getId());
-            dto.setAsientosReservados(r.getAsientosReservados());
-
-            dto.setUsuarioNombre(r.getUsuario().getNombre());
-            dto.setUsuarioEmail(r.getUsuario().getEmail());
-            dto.setConductorNombre(r.getViaje().getConductor().getUsuario().getNombre());
-            dto.setConductorId(r.getViaje().getConductor().getUsuario().getId());
-            dto.setOrigen(r.getViaje().getOrigen());
-            dto.setDestino(r.getViaje().getDestino());
-            dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
-            dto.setPrecio(r.getViaje().getPrecio());
-
-            return dto;
-        }).toList();
+        return reservaService.getByUsuarioId(usuario.getId()).stream()
+                .map(reservaService::toResponseDTO)
+                .toList();
     }
 
+    // ═══════════════════════════════════════════════
+    // CREAR RESERVA
+    // ═══════════════════════════════════════════════
     @PostMapping
     public ReservaResponseDTO crear(@Valid @RequestBody ReservaDTO dto) {
 
@@ -113,22 +94,12 @@ public class ReservaController {
                 dto.getAsientosReservados()
         );
 
-        ReservaResponseDTO response = new ReservaResponseDTO();
-        response.setId(reserva.getId());
-        response.setAsientosReservados(reserva.getAsientosReservados());
-
-        response.setUsuarioNombre(reserva.getUsuario().getNombre());
-        response.setUsuarioEmail(reserva.getUsuario().getEmail());
-        response.setConductorNombre(reserva.getViaje().getConductor().getUsuario().getNombre());
-        response.setConductorId(reserva.getViaje().getConductor().getUsuario().getId());
-        response.setOrigen(reserva.getViaje().getOrigen());
-        response.setDestino(reserva.getViaje().getDestino());
-        response.setFechaSalida(reserva.getViaje().getFechaSalida() != null ? reserva.getViaje().getFechaSalida().toString() : null);
-        response.setPrecio(reserva.getViaje().getPrecio());
-
-        return response;
+        return reservaService.toResponseDTO(reserva);
     }
 
+    // ═══════════════════════════════════════════════
+    // ACTUALIZAR RESERVA
+    // ═══════════════════════════════════════════════
     @PutMapping("/{id}")
     public ReservaResponseDTO actualizar(@PathVariable Long id,
                                          @Valid @RequestBody ReservaDTO dto) {
@@ -146,25 +117,13 @@ public class ReservaController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado");
         }
 
-        // 🔥 ACTUALIZAR
         Reserva reserva = reservaService.actualizarReserva(existente, dto);
-
-        // 🔥 MAPEAR A DTO
-        ReservaResponseDTO response = new ReservaResponseDTO();
-
-        response.setId(reserva.getId());
-        response.setAsientosReservados(reserva.getAsientosReservados());
-
-        response.setUsuarioNombre(reserva.getUsuario().getNombre());
-        response.setUsuarioEmail(reserva.getUsuario().getEmail());
-
-        response.setOrigen(reserva.getViaje().getOrigen());
-        response.setDestino(reserva.getViaje().getDestino());
-        response.setFechaSalida(reserva.getViaje().getFechaSalida() != null ? reserva.getViaje().getFechaSalida().toString() : null);
-        response.setPrecio(reserva.getViaje().getPrecio());
-
-        return response;
+        return reservaService.toResponseDTO(reserva);
     }
+
+    // ═══════════════════════════════════════════════
+    // ELIMINAR RESERVA
+    // ═══════════════════════════════════════════════
     @DeleteMapping("/{id}")
     public void eliminar(@PathVariable Long id) {
 
@@ -190,6 +149,9 @@ public class ReservaController {
         reservaService.delete(id);
     }
 
+    // ═══════════════════════════════════════════════
+    // RESERVAS ACTIVAS (PENDIENTE, ACEPTADA, EN_CURSO)
+    // ═══════════════════════════════════════════════
     @GetMapping("/activas")
     public List<ReservaResponseDTO> reservasActivas() {
 
@@ -204,27 +166,34 @@ public class ReservaController {
 
         return reservaService.getActivasByUsuario(usuario.getId())
                 .stream()
-                .map(r -> {
-                    ReservaResponseDTO dto = new ReservaResponseDTO();
-
-                    dto.setId(r.getId());
-                    dto.setAsientosReservados(r.getAsientosReservados());
-
-                    dto.setUsuarioNombre(r.getUsuario().getNombre());
-                    dto.setUsuarioEmail(r.getUsuario().getEmail());
-                    dto.setConductorNombre(r.getViaje().getConductor().getUsuario().getNombre());
-                    dto.setConductorId(r.getViaje().getConductor().getUsuario().getId());
-
-                    dto.setOrigen(r.getViaje().getOrigen());
-                    dto.setDestino(r.getViaje().getDestino());
-                    dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
-                    dto.setPrecio(r.getViaje().getPrecio());
-
-                    return dto;
-                })
+                .map(reservaService::toResponseDTO)
                 .toList();
     }
 
+    // ═══════════════════════════════════════════════
+    // VIAJES REALIZADOS (solo FINALIZADA)
+    // ═══════════════════════════════════════════════
+    @GetMapping("/finalizadas")
+    public List<ReservaResponseDTO> reservasFinalizadas() {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+
+        Usuario usuario = Optional.ofNullable(usuarioService.findByEmail(email))
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Usuario no encontrado"
+                ));
+
+        return reservaService.getFinalizadasByUsuario(usuario.getId())
+                .stream()
+                .map(reservaService::toResponseDTO)
+                .toList();
+    }
+
+    // ═══════════════════════════════════════════════
+    // RESERVAS DE MIS VIAJES (para conductor)
+    // ═══════════════════════════════════════════════
     @GetMapping("/conductor")
     public List<ReservaConductorDTO> reservasDeMisViajes() {
 
@@ -240,8 +209,59 @@ public class ReservaController {
         return reservaService.getReservasDeMisViajes(usuario.getId());
     }
 
+    // ═══════════════════════════════════════════════
+    // CANCELAR RESERVA (mantiene endpoint original)
+    // ═══════════════════════════════════════════════
     @PatchMapping("/cancelar/{id}")
-    public Reserva cancelar(@PathVariable Long id) {
-        return reservaService.cancelarReserva(id);
+    public ReservaResponseDTO cancelar(@PathVariable Long id) {
+        Usuario usuario = getAuthenticatedUser();
+        Reserva reserva = reservaService.cancelarReserva(id, usuario.getId());
+        return reservaService.toResponseDTO(reserva);
+    }
+
+    // ═══════════════════════════════════════════════
+    // CAMBIOS DE ESTADO
+    // ═══════════════════════════════════════════════
+
+    @PostMapping("/{id}/aceptar")
+    public ReservaResponseDTO aceptar(@PathVariable Long id) {
+        Usuario usuario = getAuthenticatedUser();
+        Reserva reserva = reservaService.aceptarReserva(id, usuario.getId());
+        return reservaService.toResponseDTO(reserva);
+    }
+
+    @PostMapping("/{id}/iniciar")
+    public ReservaResponseDTO iniciar(@PathVariable Long id) {
+        Usuario usuario = getAuthenticatedUser();
+        Reserva reserva = reservaService.iniciarReserva(id, usuario.getId());
+        return reservaService.toResponseDTO(reserva);
+    }
+
+    @PostMapping("/{id}/finalizar")
+    public ReservaResponseDTO finalizar(@PathVariable Long id) {
+        Usuario usuario = getAuthenticatedUser();
+        Reserva reserva = reservaService.finalizarReserva(id, usuario.getId());
+        return reservaService.toResponseDTO(reserva);
+    }
+
+    @PostMapping("/{id}/cancelar")
+    public ReservaResponseDTO cancelarPost(@PathVariable Long id) {
+        Usuario usuario = getAuthenticatedUser();
+        Reserva reserva = reservaService.cancelarReserva(id, usuario.getId());
+        return reservaService.toResponseDTO(reserva);
+    }
+
+    private Usuario getAuthenticatedUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado");
+        }
+
+        try {
+            return usuarioService.findByEmail(auth.getName());
+        } catch (RuntimeException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no encontrado");
+        }
     }
 }

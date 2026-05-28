@@ -1,4 +1,5 @@
 package progresa.proyectovalenruta.Entity;
+import progresa.proyectovalenruta.Entity.Viaje;
 
 import jakarta.persistence.*;
 import lombok.Data;

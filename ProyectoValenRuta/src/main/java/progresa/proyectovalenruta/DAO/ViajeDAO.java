@@ -18,8 +18,8 @@ public interface ViajeDAO extends JpaRepository<Viaje, Long> {
 
     @Query("""
         SELECT v FROM Viaje v
-        WHERE v.asientosDisponibles > 0
-        AND v.estado <> 'FINALIZADO'
+        WHERE v.estado <> 'FINALIZADO'
+        AND v.estado <> 'CANCELADO'
         AND (:origen IS NULL OR LOWER(v.origen) LIKE LOWER(CONCAT('%', :origen, '%')))
         AND (:destino IS NULL OR LOWER(v.destino) LIKE LOWER(CONCAT('%', :destino, '%')))
         AND (:fechaSalida IS NULL OR v.fechaSalida >= :fechaSalida)

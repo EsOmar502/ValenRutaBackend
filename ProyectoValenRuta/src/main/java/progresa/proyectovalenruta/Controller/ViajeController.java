@@ -85,13 +85,33 @@ public class ViajeController {
         return viajeService.buscarCercanos(lat, lng, radio);
     }
 
-    // PATCH finalizar viaje
-    @PatchMapping("/finalizar/{id}")
-    public Map<String, Object> finalizar(@PathVariable Long id) {
-        Viaje viaje = viajeService.finalizarViaje(id);
+    // POST iniciar viaje
+    @PostMapping("/{id}/iniciar")
+    public Map<String, Object> iniciarViaje(@PathVariable Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario usuario = usuarioService.findByEmail(auth.getName());
+        if (usuario == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no encontrado");
+        }
+        Viaje viaje = viajeService.iniciarViaje(id, usuario.getId());
         return Map.of(
                 "id", viaje.getId(),
-                "estado", viaje.getEstado()
+                "estado", viaje.getEstado().name()
+        );
+    }
+
+    // POST finalizar viaje
+    @PostMapping("/{id}/finalizar")
+    public Map<String, Object> finalizarViaje(@PathVariable Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario usuario = usuarioService.findByEmail(auth.getName());
+        if (usuario == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no encontrado");
+        }
+        Viaje viaje = viajeService.finalizarViaje(id, usuario.getId());
+        return Map.of(
+                "id", viaje.getId(),
+                "estado", viaje.getEstado().name()
         );
     }
 
@@ -171,7 +191,7 @@ public class ViajeController {
                 "id", saved.getId(),
                 "origen", saved.getOrigen(),
                 "destino", saved.getDestino(),
-                "estado", saved.getEstado(),
+                "estado", saved.getEstado() != null ? saved.getEstado().name() : null,
                 "precio", saved.getPrecio(),
                 "asientosDisponibles", saved.getAsientosDisponibles()
         );
@@ -246,7 +266,7 @@ public class ViajeController {
                 "id", saved.getId(),
                 "origen", saved.getOrigen(),
                 "destino", saved.getDestino(),
-                "estado", saved.getEstado(),
+                "estado", saved.getEstado() != null ? saved.getEstado().name() : null,
                 "precio", saved.getPrecio(),
                 "asientosDisponibles", saved.getAsientosDisponibles()
         );
@@ -310,7 +330,7 @@ public class ViajeController {
                 "id", saved.getId(),
                 "origen", saved.getOrigen(),
                 "destino", saved.getDestino(),
-                "estado", saved.getEstado(),
+                "estado", saved.getEstado() != null ? saved.getEstado().name() : null,
                 "precio", saved.getPrecio(),
                 "asientosDisponibles", saved.getAsientosDisponibles()
         );

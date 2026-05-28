@@ -17,5 +17,5 @@ public class ReservaConductorDTO {
     private String fechaSalida;
 
     private String estadoViaje;
-
+    private String estadoReserva;
 }

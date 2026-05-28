@@ -19,7 +19,8 @@ public class Reserva {
     @Min(value = 1, message = "Debe reservar al menos 1 asiento")
     private Integer asientosReservados;
 
-    private String estado;
+    @Enumerated(EnumType.STRING)
+    private EstadoReserva estado;
 
     @JsonIgnore
     @ManyToOne

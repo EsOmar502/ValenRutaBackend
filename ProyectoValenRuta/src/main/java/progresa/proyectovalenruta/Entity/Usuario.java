@@ -38,5 +38,5 @@ public class Usuario {
     @OneToOne(mappedBy = "usuario")
     private Conductor conductor;
 
-
+    private Double rating = 0.0;
 }

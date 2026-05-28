@@ -18,4 +18,9 @@ public class ReservaResponseDTO {
     private String destino;
     private String fechaSalida;
     private double precio;
+
+    // Nuevos campos
+    private String estado;
+    private Integer asientosDisponibles;
+    private Long viajeId;
 }

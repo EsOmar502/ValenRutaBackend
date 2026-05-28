@@ -54,6 +54,9 @@ public class SecurityConfig {
                         // AUTH
                         .requestMatchers("/api/auth/**").permitAll()
 
+                        // VIAJES propios requiere JWT aunque sea GET
+                        .requestMatchers(HttpMethod.GET, "/api/viajes/mis").authenticated()
+
                         // VIAJES GET público
                         .requestMatchers(HttpMethod.GET, "/api/viajes/**").permitAll()
 

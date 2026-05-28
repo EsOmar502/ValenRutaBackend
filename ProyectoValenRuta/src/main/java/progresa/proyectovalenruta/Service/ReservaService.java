@@ -8,6 +8,8 @@ import progresa.proyectovalenruta.DAO.ReservaDAO;
 import progresa.proyectovalenruta.DTO.ReservaConductorDTO;
 import progresa.proyectovalenruta.DTO.ReservaDTO;
 import progresa.proyectovalenruta.DTO.ReservaResponseDTO;
+import progresa.proyectovalenruta.Entity.EstadoReserva;
+import progresa.proyectovalenruta.Entity.EstadoViaje;
 import progresa.proyectovalenruta.Entity.Reserva;
 import progresa.proyectovalenruta.Entity.Usuario;
 import progresa.proyectovalenruta.Entity.Viaje;
@@ -41,27 +43,12 @@ public class ReservaService {
 
         return reservaDAO.findByUsuario_Id(usuarioId)
                 .stream()
-                .map(r -> {
-                    ReservaResponseDTO dto = new ReservaResponseDTO();
-
-                    dto.setId(r.getId());
-                    dto.setAsientosReservados(r.getAsientosReservados());
-
-                    dto.setUsuarioNombre(r.getUsuario().getNombre());
-                    dto.setUsuarioEmail(r.getUsuario().getEmail());
-
-                    dto.setOrigen(r.getViaje().getOrigen());
-                    dto.setDestino(r.getViaje().getDestino());
-                    dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
-                    dto.setPrecio(r.getViaje().getPrecio());
-
-                    return dto;
-                })
+                .map(this::toResponseDTO)
                 .toList();
     }
 
     // ============================
-    // 🚀 CREAR RESERVA (CORREGIDO)
+    // 🚀 CREAR RESERVA
     // ============================
     @Transactional
     public Reserva crearReserva(Usuario usuario, Viaje viaje, int asientosReservados) {
@@ -74,6 +61,12 @@ public class ReservaService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Viaje inválido");
         }
 
+        Viaje viajeBD = viajeService.getById(viaje.getId());
+
+        if (viajeBD == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Viaje inválido");
+        }
+
         if (asientosReservados <= 0) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -81,54 +74,86 @@ public class ReservaService {
             );
         }
 
-        // 🚫 No reservar su propio viaje
-        if (viaje.getConductor().getUsuario().getId().equals(usuario.getId())) {
+        if (viajeBD.getEstado() == EstadoViaje.FINALIZADO
+                || viajeBD.getEstado() == EstadoViaje.CANCELADO) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No se puede reservar un viaje finalizado o cancelado"
+            );
+        }
+
+        if (viajeBD.getConductor() == null
+                || viajeBD.getConductor().getUsuario() == null
+                || viajeBD.getConductor().getUsuario().getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Viaje sin conductor válido");
+        }
+
+        if (viajeBD.getConductor().getUsuario().getId().equals(usuario.getId())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "No puedes reservar tu propio viaje"
             );
         }
 
-        // 🚫 Duplicado SOLO si no está cancelada
-        if (reservaDAO.existsByUsuario_IdAndViaje_IdAndEstadoNot(
+        if (reservaDAO.existsByUsuario_IdAndViaje_Id(
                 usuario.getId(),
-                viaje.getId(),
-                "CANCELADA"
+                viajeBD.getId()
         )) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Ya tienes una reserva activa para este viaje"
+                    "Ya tienes una reserva para este viaje"
             );
         }
 
-        // 🚫 Asientos
-        if (viaje.getAsientosDisponibles() < asientosReservados) {
+        Integer asientosDisponibles = viajeBD.getAsientosDisponibles();
+
+        if (asientosDisponibles == null || asientosDisponibles < 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El viaje tiene plazas inválidas"
+            );
+        }
+
+        if (asientosDisponibles <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Este viaje está completo"
+            );
+        }
+
+        if (asientosDisponibles < asientosReservados) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "No hay suficientes asientos disponibles"
             );
         }
 
-        // 🔥 RESTAR ASIENTOS
-        viaje.setAsientosDisponibles(
-                viaje.getAsientosDisponibles() - asientosReservados
-        );
+        int plazasRestantes = asientosDisponibles - asientosReservados;
+
+        if (plazasRestantes < 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No hay suficientes asientos disponibles"
+            );
+        }
+
+        viajeBD.setAsientosDisponibles(plazasRestantes);
 
         Reserva reserva = new Reserva();
         reserva.setUsuario(usuario);
-        reserva.setViaje(viaje);
+        reserva.setViaje(viajeBD);
         reserva.setAsientosReservados(asientosReservados);
 
-        // 🔥 ESTADO POR DEFECTO
-        reserva.setEstado("CONFIRMADA");
+        reserva.setEstado(EstadoReserva.PENDIENTE);
 
         return reservaDAO.save(reserva);
     }
 
-    // Cancelar Reserva
-
+    // ============================
+    // ✅ ACEPTAR RESERVA
+    // ============================
     @Transactional
-    public Reserva cancelarReserva(Long id) {
+    public Reserva aceptarReserva(Long id, Long usuarioAutenticadoId) {
 
         Reserva reserva = reservaDAO.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -136,10 +161,95 @@ public class ReservaService {
                         "Reserva no encontrada"
                 ));
 
-        if ("CANCELADA".equals(reserva.getEstado())) {
+        validarConductorDeReserva(reserva, usuarioAutenticadoId);
+
+        if (reserva.getEstado() != EstadoReserva.PENDIENTE) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Solo se pueden aceptar reservas en estado PENDIENTE"
+            );
+        }
+
+        reserva.setEstado(EstadoReserva.ACEPTADA);
+        return reservaDAO.save(reserva);
+    }
+
+    // ============================
+    // ▶️ INICIAR RESERVA
+    // ============================
+    @Transactional
+    public Reserva iniciarReserva(Long id, Long usuarioAutenticadoId) {
+
+        Reserva reserva = reservaDAO.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Reserva no encontrada"
+                ));
+
+        validarConductorDeReserva(reserva, usuarioAutenticadoId);
+
+        if (reserva.getEstado() != EstadoReserva.ACEPTADA) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Solo se pueden iniciar reservas en estado ACEPTADA"
+            );
+        }
+
+        reserva.setEstado(EstadoReserva.EN_CURSO);
+        return reservaDAO.save(reserva);
+    }
+
+    // ============================
+    // 🏁 FINALIZAR RESERVA
+    // ============================
+    @Transactional
+    public Reserva finalizarReserva(Long id, Long usuarioAutenticadoId) {
+
+        Reserva reserva = reservaDAO.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Reserva no encontrada"
+                ));
+
+        validarConductorDeReserva(reserva, usuarioAutenticadoId);
+
+        if (reserva.getEstado() != EstadoReserva.EN_CURSO
+                && reserva.getEstado() != EstadoReserva.ACEPTADA) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Solo se pueden finalizar reservas en estado ACEPTADA o EN_CURSO"
+            );
+        }
+
+        reserva.setEstado(EstadoReserva.FINALIZADA);
+        return reservaDAO.save(reserva);
+    }
+
+    // ============================
+    // ❌ CANCELAR RESERVA
+    // ============================
+    @Transactional
+    public Reserva cancelarReserva(Long id, Long usuarioAutenticadoId) {
+
+        Reserva reserva = reservaDAO.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Reserva no encontrada"
+                ));
+
+        validarPropietarioDeReserva(reserva, usuarioAutenticadoId);
+
+        if (reserva.getEstado() == EstadoReserva.CANCELADA) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "La reserva ya está cancelada"
+            );
+        }
+
+        if (reserva.getEstado() == EstadoReserva.FINALIZADA) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "No se puede cancelar una reserva finalizada"
             );
         }
 
@@ -150,13 +260,31 @@ public class ReservaService {
         );
 
         // 🔥 CAMBIAR ESTADO
-        reserva.setEstado("CANCELADA");
+        reserva.setEstado(EstadoReserva.CANCELADA);
 
         return reservaDAO.save(reserva);
     }
 
+    private void validarConductorDeReserva(Reserva reserva, Long usuarioAutenticadoId) {
+        if (usuarioAutenticadoId == null
+                || reserva.getViaje() == null
+                || reserva.getViaje().getConductor() == null
+                || reserva.getViaje().getConductor().getUsuario() == null
+                || !usuarioAutenticadoId.equals(reserva.getViaje().getConductor().getUsuario().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado");
+        }
+    }
+
+    private void validarPropietarioDeReserva(Reserva reserva, Long usuarioAutenticadoId) {
+        if (usuarioAutenticadoId == null
+                || reserva.getUsuario() == null
+                || !usuarioAutenticadoId.equals(reserva.getUsuario().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No autorizado");
+        }
+    }
+
     // ============================
-    // 🔄 ACTUALIZAR RESERVA (MEJORADO)
+    // 🔄 ACTUALIZAR RESERVA
     // ============================
     @Transactional
     public Reserva actualizarReserva(Reserva existente, ReservaDTO dto) {
@@ -215,7 +343,7 @@ public class ReservaService {
     }
 
     // ============================
-    // 🧨 ELIMINAR (CORRECTO)
+    // 🧨 ELIMINAR
     // ============================
     @Transactional
     public void delete(Long id) {
@@ -238,28 +366,34 @@ public class ReservaService {
         reservaDAO.delete(reserva);
     }
 
+    // ============================
+    // 📋 RESERVAS ACTIVAS (PENDIENTE, ACEPTADA, EN_CURSO)
+    // ============================
     public List<Reserva> getActivasByUsuario(Long usuarioId) {
-        return reservaDAO.findByUsuario_IdAndEstado(usuarioId, "CONFIRMADA");
+        return reservaDAO.findByUsuario_IdAndEstadoIn(
+                usuarioId,
+                List.of(EstadoReserva.PENDIENTE, EstadoReserva.ACEPTADA, EstadoReserva.EN_CURSO)
+        );
     }
 
+    // ============================
+    // 🏁 VIAJES REALIZADOS (FINALIZADA)
+    // ============================
+    public List<Reserva> getFinalizadasByUsuario(Long usuarioId) {
+        return reservaDAO.findByUsuario_IdAndEstado(usuarioId, EstadoReserva.FINALIZADA);
+    }
+
+    // ============================
+    // 🚗 RESERVAS DE MIS VIAJES (para conductor)
+    // ============================
     public List<ReservaConductorDTO> getReservasDeMisViajes(Long usuarioId) {
 
         return reservaDAO.findAll().stream()
 
-                // 🔍 DEBUG GLOBAL (ANTES DE TODO)
-                .peek(r -> {
-                    System.out.println("-----");
-                    System.out.println("Reserva ID: " + r.getId());
-                    System.out.println("Estado: " + r.getEstado());
-                    System.out.println("Usuario reserva: " + r.getUsuario().getId());
-                    System.out.println("Conductor usuario: " + r.getViaje().getConductor().getUsuario().getId());
-                    System.out.println("Usuario logueado: " + usuarioId);
-                })
+                // 🔥 FILTRO: reservas no canceladas
+                .filter(r -> r.getEstado() != EstadoReserva.CANCELADA)
 
-                // 🔥 FILTRO 1
-                .filter(r -> "CONFIRMADA".equals(r.getEstado()))
-
-                // 🔥 FILTRO 2
+                // 🔥 FILTRO: viajes donde soy conductor
                 .filter(r -> r.getViaje()
                         .getConductor()
                         .getUsuario()
@@ -278,12 +412,50 @@ public class ReservaService {
                     dto.setDestino(r.getViaje().getDestino());
                     dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
 
-                    dto.setEstadoViaje(r.getViaje().getEstado());
+                    EstadoViaje estadoViaje = r.getViaje().getEstado();
+                    dto.setEstadoViaje(estadoViaje != null ? estadoViaje.name() : null);
 
+                    // Mapeo manual solicitado: si el viaje está en curso o finalizado, la reserva refleja ese estado
+                    if (estadoViaje == EstadoViaje.EN_CURSO) {
+                        dto.setEstadoReserva(EstadoReserva.EN_CURSO.name());
+                    } else if (estadoViaje == EstadoViaje.FINALIZADO) {
+                        dto.setEstadoReserva(EstadoReserva.FINALIZADA.name());
+                    } else {
+                        dto.setEstadoReserva(r.getEstado() != null ? r.getEstado().name() : null);
+                    }
 
                     return dto;
                 })
                 .toList();
     }
 
+    // ============================
+    // 🔧 HELPER: Mapear Reserva → ReservaResponseDTO
+    // ============================
+    public ReservaResponseDTO toResponseDTO(Reserva r) {
+        ReservaResponseDTO dto = new ReservaResponseDTO();
+
+        dto.setId(r.getId());
+        dto.setAsientosReservados(r.getAsientosReservados());
+
+        dto.setUsuarioNombre(r.getUsuario().getNombre());
+        dto.setUsuarioEmail(r.getUsuario().getEmail());
+
+        if (r.getViaje().getConductor() != null && r.getViaje().getConductor().getUsuario() != null) {
+            dto.setConductorNombre(r.getViaje().getConductor().getUsuario().getNombre());
+            dto.setConductorId(r.getViaje().getConductor().getUsuario().getId());
+        }
+
+        dto.setOrigen(r.getViaje().getOrigen());
+        dto.setDestino(r.getViaje().getDestino());
+        dto.setFechaSalida(r.getViaje().getFechaSalida() != null ? r.getViaje().getFechaSalida().toString() : null);
+        dto.setPrecio(r.getViaje().getPrecio());
+
+        // Nuevos campos
+        dto.setEstado(r.getEstado() != null ? r.getEstado().name() : null);
+        dto.setAsientosDisponibles(r.getViaje().getAsientosDisponibles());
+        dto.setViajeId(r.getViaje().getId());
+
+        return dto;
+    }
 }

@@ -29,9 +29,15 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request){
 
-        Usuario usuario = usuarioService.findByEmail(request.getEmail());
+        if (request == null || request.getEmail() == null || request.getPassword() == null) {
+            return ResponseEntity.status(400).body("Email y contraseña son obligatorios");
+        }
 
-        if (usuario == null) {
+        Usuario usuario;
+
+        try {
+            usuario = usuarioService.findByEmail(request.getEmail());
+        } catch (RuntimeException ex) {
             return ResponseEntity.status(401).body("Usuario no encontrado");
         }
 
