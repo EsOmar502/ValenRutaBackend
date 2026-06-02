@@ -404,8 +404,11 @@ public class ReservaService {
                     ReservaConductorDTO dto = new ReservaConductorDTO();
 
                     dto.setReservaId(r.getId());
+                    dto.setViajeId(r.getViaje().getId());
+                    dto.setUsuarioId(r.getUsuario().getId());
                     dto.setUsuarioNombre(r.getUsuario().getNombre());
                     dto.setUsuarioEmail(r.getUsuario().getEmail());
+                    dto.setUsuarioRating(ratingUsuario(r.getUsuario()));
                     dto.setAsientos(r.getAsientosReservados());
 
                     dto.setOrigen(r.getViaje().getOrigen());
@@ -440,10 +443,12 @@ public class ReservaService {
 
         dto.setUsuarioNombre(r.getUsuario().getNombre());
         dto.setUsuarioEmail(r.getUsuario().getEmail());
+        dto.setUsuarioRating(ratingUsuario(r.getUsuario()));
 
         if (r.getViaje().getConductor() != null && r.getViaje().getConductor().getUsuario() != null) {
             dto.setConductorNombre(r.getViaje().getConductor().getUsuario().getNombre());
             dto.setConductorId(r.getViaje().getConductor().getUsuario().getId());
+            dto.setConductorRating(ratingUsuario(r.getViaje().getConductor().getUsuario()));
         }
 
         dto.setOrigen(r.getViaje().getOrigen());
@@ -457,5 +462,9 @@ public class ReservaService {
         dto.setViajeId(r.getViaje().getId());
 
         return dto;
+    }
+
+    private Double ratingUsuario(Usuario usuario) {
+        return usuario != null && usuario.getRating() != null ? usuario.getRating() : 0.0;
     }
 }

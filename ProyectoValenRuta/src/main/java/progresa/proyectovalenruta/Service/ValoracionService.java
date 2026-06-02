@@ -14,14 +14,12 @@ import progresa.proyectovalenruta.DTO.CrearValoracionDTO;
 import progresa.proyectovalenruta.DTO.ValoracionResponseDTO;
 import progresa.proyectovalenruta.Entity.Conductor;
 import progresa.proyectovalenruta.Entity.EstadoReserva;
-import progresa.proyectovalenruta.Entity.Reserva;
 import progresa.proyectovalenruta.Entity.Usuario;
 import progresa.proyectovalenruta.Entity.Valoracion;
 import progresa.proyectovalenruta.Entity.Viaje;
 
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -123,16 +121,27 @@ public class ValoracionService {
     }
 
     private void actualizarRatingUsuario(Usuario usuario) {
-        List<Valoracion> valoraciones = valoracionDAO.findByUsuarioValorado_Id(usuario.getId());
-        if (!valoraciones.isEmpty()) {
-            double sum = valoraciones.stream().mapToDouble(Valoracion::getPuntuacion).sum();
-            double average = sum / valoraciones.size();
-            // Round to 1 decimal place
-            average = Math.round(average * 10.0) / 10.0;
-            
-            usuario.setRating(average);
-            usuarioDAO.save(usuario);
+        if (usuario == null || usuario.getId() == null) {
+            return;
         }
+
+        Double promedio = valoracionDAO.calcularPromedioPuntuacionRecibida(usuario.getId());
+        usuario.setRating(normalizarRating(promedio));
+        usuarioDAO.save(usuario);
+    }
+
+    private double normalizarRating(Double promedio) {
+        double rating = promedio != null ? promedio : 0.0;
+
+        if (rating < 0.0) {
+            rating = 0.0;
+        }
+
+        if (rating > 5.0) {
+            rating = 5.0;
+        }
+
+        return Math.round(rating * 10.0) / 10.0;
     }
 
     public List<ValoracionResponseDTO> getValoracionesPorConductor(Long conductorId) {
@@ -158,6 +167,12 @@ public class ValoracionService {
         dto.setFecha(v.getFechaCreacion() != null ? v.getFechaCreacion().toString() : null);
         dto.setUsuarioValoradoId(v.getUsuarioValorado().getId());
         dto.setUsuarioQueValoraId(v.getUsuarioQueValora().getId());
+        dto.setUsuarioValoradoRating(ratingUsuario(v.getUsuarioValorado()));
+        dto.setUsuarioQueValoraRating(ratingUsuario(v.getUsuarioQueValora()));
         return dto;
+    }
+
+    private Double ratingUsuario(Usuario usuario) {
+        return usuario != null && usuario.getRating() != null ? usuario.getRating() : 0.0;
     }
 }
